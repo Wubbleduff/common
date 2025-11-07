@@ -460,5 +460,49 @@ int main(int argc, char** argv)
         }
     }
 
+    // matrix multiply
+    {
+        m4x4 m0 = {
+            .a = {
+                {1.0f, 2.0f, 3.0f, 4.0f},
+                {5.0f, 6.0f, 7.0f, 8.0f},
+                {9.0f, 10.0f, 11.0f, 12.0f},
+                {13.0f, 14.0f, 15.0f, 16.0f},
+            }
+        };
+
+        m4x4 m1 = {
+            .a = {
+                {0.0f, 2.0f, 4.0f, 6.0f},
+                {8.0f, 10.0f, 12.0f, 14.0f},
+                {16.0f, 18.0f, 20.0f, 22.0f},
+                {24.0f, 26.0f, 28.0f, 30.0f},
+            }
+        };
+
+        m4x4 result;
+        mul_m4x4(&result, &m0, &m1);
+
+        ASSERT(result.a[0][0] == 160.0f, "Test fail.");
+        ASSERT(result.a[0][1] == 180.0f, "Test fail.");
+        ASSERT(result.a[0][2] == 200.0f, "Test fail.");
+        ASSERT(result.a[0][3] == 220.0f, "Test fail.");
+
+        ASSERT(result.a[1][0] == 352.0f, "Test fail.");
+        ASSERT(result.a[1][1] == 404.0f, "Test fail.");
+        ASSERT(result.a[1][2] == 456.0f, "Test fail.");
+        ASSERT(result.a[1][3] == 508.0f, "Test fail.");
+
+        ASSERT(result.a[2][0] == 544.0f, "Test fail.");
+        ASSERT(result.a[2][1] == 628.0f, "Test fail.");
+        ASSERT(result.a[2][2] == 712.0f, "Test fail.");
+        ASSERT(result.a[2][3] == 796.0f, "Test fail.");
+
+        ASSERT(result.a[3][0] == 736.0f, "Test fail.");
+        ASSERT(result.a[3][1] == 852.0f, "Test fail.");
+        ASSERT(result.a[3][2] == 968.0f, "Test fail.");
+        ASSERT(result.a[3][3] == 1084.0f, "Test fail.");
+    }
+
     return g_num_fails != 0;
 }

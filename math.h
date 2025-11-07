@@ -46,6 +46,19 @@ typedef struct v4Tag
     };
 } v4;
 
+// Matrix structures. Not intended for storage. Only use as locals for convenience.
+typedef struct m4x4Tag
+{
+    union
+    {
+        __m128 v[4];
+        struct
+        {
+            _Alignas(16) f32 a[4][4];
+        };
+    };
+} m4x4;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // min
@@ -313,6 +326,24 @@ static inline f32 dot_v4(v4 a, v4 b)
 
 
 ////////////////////////////////////////////////////////////////////////////////
+// cross product
+static inline v3 cross_v3(v3 a, v3 b)
+{
+    v3 r;
+    r.v = _mm_fmsub_ps(
+        _mm_shuffle_ps(a.v, a.v, 0b11001001),
+        _mm_shuffle_ps(b.v, b.v, 0b11010010),
+        _mm_mul_ps(
+            _mm_shuffle_ps(a.v, a.v, 0b11010010),
+            _mm_shuffle_ps(b.v, b.v, 0b11001001)
+        )
+    );
+    return r;
+}
+////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
 // length
 static inline f32 length_sq_v2(v2 a) { return dot_v2(a, a); }
 static inline f32 length_sq_v3(v3 a) { return dot_v3(a, a); }
@@ -404,5 +435,72 @@ static inline v4 normalize_or_v4(v4 a, v4 def)
         _mm_cmp_ps(l2, _mm_set1_ps(0.0f), _CMP_EQ_OQ)
     );
     return result;
+}
+////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
+// matrix ops
+static inline void identity_m4x4(m4x4* a)
+{
+    a->v[0] = _mm_setr_ps(1.0f, 0.0f, 0.0f, 0.0f);
+    a->v[1] = _mm_setr_ps(0.0f, 1.0f, 0.0f, 0.0f);
+    a->v[2] = _mm_setr_ps(0.0f, 0.0f, 1.0f, 0.0f);
+    a->v[3] = _mm_setr_ps(0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+// 4x4 matrix multiply : r = a * b.
+// NOTE: Matrices are assumed to be row-major.
+static inline void mul_m4x4(m4x4* r, m4x4* a, m4x4* b)
+{
+    /*
+     *
+     * | a00  a01  a02  a03 |   | b00  b01  b02  b03 |   
+     * | a10  a11  a12  a13 | * | b10  b11  b12  b13 | = 
+     * | a20  a21  a22  a23 |   | b20  b21  b22  b23 |   
+     * | a30  a31  a32  a33 |   | b30  b31  b32  b33 |   
+     *
+     * | a00*b00 + a01*b10 + a02*b20 + a03*b30    a00*b01 + a01*b11 + a02*b21 + a03*b31    a00*b02 + a01*b12 + a02*b22 + a03*b32    a00*b03 + a01*b13 + a02*b23 + a03*b33 |
+     * | a10*b00 + a11*b10 + a12*b20 + a13*b30    a10*b01 + a11*b11 + a12*b21 + a13*b31    a10*b02 + a11*b12 + a12*b22 + a13*b32    a10*b03 + a11*b13 + a12*b23 + a13*b33 |
+     * | a20*b00 + a21*b10 + a22*b20 + a23*b30    a20*b01 + a21*b11 + a22*b21 + a23*b31    a20*b02 + a21*b12 + a22*b22 + a23*b32    a20*b03 + a21*b13 + a22*b23 + a23*b33 |
+     * | a30*b00 + a31*b10 + a32*b20 + a33*b30    a30*b01 + a31*b11 + a32*b21 + a33*b31    a30*b02 + a31*b12 + a32*b22 + a33*b32    a30*b03 + a31*b13 + a32*b23 + a33*b33 |
+     *
+     */
+
+    /*
+    Reference
+    for(u64 i = 0; i < 4; i++)
+    {
+        for(u64 j = 0; j < 4; j++)
+        {
+            r[i*4 + j] =
+                a[i*4 + 0] * b[0*4 + j] + 
+                a[i*4 + 1] * b[1*4 + j] + 
+                a[i*4 + 2] * b[2*4 + j] + 
+                a[i*4 + 3] * b[3*4 + j];
+        }
+    }
+    */
+
+    for(u64 row = 0; row < 4; row++)
+    {
+        const __m128 v = _mm_fmadd_ps(
+            _mm_broadcast_ss(&a->a[row][0]),
+            _mm_loadu_ps(&b->a[0][0]),
+            _mm_fmadd_ps(
+                _mm_broadcast_ss(&a->a[row][1]),
+                _mm_loadu_ps(&b->a[1][0]),
+                _mm_fmadd_ps(
+                    _mm_broadcast_ss(&a->a[row][2]),
+                    _mm_loadu_ps(&b->a[2][0]),
+                    _mm_mul_ps(
+                        _mm_broadcast_ss(&a->a[row][3]),
+                        _mm_loadu_ps(&b->a[3][0])
+                    )
+                )
+            )
+        );
+        _mm_storeu_ps(&r->a[row][0], v);
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////

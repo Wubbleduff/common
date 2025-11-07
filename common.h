@@ -46,6 +46,7 @@ void assert_fn(const u64 c, const char* msg, ...);
 #define ARRAY_COUNT(N) (sizeof(N) / sizeof((N)[0]))
 
 void *memcpy(void *dst, const void *src, size_t count);
+void *memset(void *dst, int c, size_t count);
 #define COPY_ARRAY(DST, SRC) \
     do { \
         _Static_assert(sizeof(DST) == sizeof(SRC), "Array sizes do not match."); \
@@ -89,5 +90,10 @@ static inline f32 nan_f32(void)
 static inline u32 is_nan(f32 a)
 {
     return a != a;
+}
+
+static inline u32 truncate_power_of_2_u32(const u32 a)
+{
+    return a == 0 ? 0 : (1 << (31 - _lzcnt_u32(a)));
 }
 
